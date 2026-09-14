@@ -49,7 +49,9 @@ with tempfile.TemporaryDirectory(prefix="agentos-iso-artifact-") as temporary:
     (root / "out/iso").mkdir(parents=True)
     (root / "out/iso/agentos-0.1.0-test.iso").write_bytes(b"ISO checksum fixture\n")
     (root / "release/channels").mkdir(parents=True)
-    (root / "release/channels/edge.json").write_text('{"version":"0.1.0"}\n')
+    (root / "release/channels/edge.json").write_text('{"version":"stale-channel-version"}\n')
+    (root / "iso-repo/x86_64").mkdir(parents=True)
+    (root / "iso-repo/x86_64/release-manifest.json").write_text('{"version":"0.1.0"}\n')
     (root / "release/agentos-signing.asc").touch()
     (root / "bin").mkdir()
     gpg = root / "bin/gpg"

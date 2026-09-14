@@ -162,7 +162,7 @@ jobs:
           df -h /
       - name: Build versioned ISO in x86_64 Arch
         run: |
-          VERSION="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          VERSION="$(jq -er '.version' iso-repo/x86_64/release-manifest.json)"
           export VERSION
           # Docker supplies the supported Arch userspace. mkarchiso requires
           # privilege, so it runs only inside this disposable CI container.
@@ -201,7 +201,7 @@ jobs:
           (cd "$(dirname "$iso")" && sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256")
           gpg --homedir "$gpg_home" --batch --yes --armor --detach-sign --local-user "$AGENTOS_GPG_KEY_ID" --output "$iso.asc" "$iso"
           hash="$(awk '{print $1}' "$iso.sha256")"
-          version="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          version="$(jq -er '.version' iso-repo/x86_64/release-manifest.json)"
           iso_name="$(basename "$iso")"
           case "$iso_name" in
             "agentos-${version}-"*.iso) ;;
@@ -218,7 +218,7 @@ jobs:
           (cd "$(dirname "$iso")" && sha256sum -c "$(basename "$iso").sha256")
           gpg --batch --import release/agentos-signing.asc
           gpg --batch --verify "$iso.asc" "$iso"
-          version="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          version="$(jq -er '.version' iso-repo/x86_64/release-manifest.json)"
           iso_name="$(basename "$iso")"
           case "$iso_name" in
             "agentos-${version}-"*.iso) ;;

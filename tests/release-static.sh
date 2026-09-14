@@ -45,6 +45,7 @@ grep -Fq 'sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256"' .github/
 grep -Fq '.commit == $commit' .github/workflows/release.yml
 grep -Fq '"agentos-${version}-"*.iso) ;;' .github/workflows/release.yml
 python3 tests/iso-artifact.py
+python3 tests/installer-version.py
 grep -Fq 'cp out/repo/x86_64/agentos.db "$flat/"' .github/workflows/release.yml
 grep -Fq 'cp out/repo/x86_64/agentos.db.sig "$flat/"' .github/workflows/release.yml
 grep -Fq 'cp out/repo/x86_64/agentos.files "$flat/"' .github/workflows/release.yml

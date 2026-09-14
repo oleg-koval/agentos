@@ -19,8 +19,12 @@ if [[ ${EUID} -ne 0 ]]; then echo 'Run apply-system-policy as root.' >&2; exit 1
 install -d -m 755 /etc/agentos
 
 [[ -f /etc/agentos/channel ]] || echo stable > /etc/agentos/channel
-if [[ -f "$SOURCE_DIR/release/channels/stable.json" ]] && command -v jq >/dev/null 2>&1; then
-  jq -r '.version' "$SOURCE_DIR/release/channels/stable.json" > /etc/agentos/version
+channel="${AGENTOS_CHANNEL:-$(cat /etc/agentos/channel)}"
+case "$channel" in stable|beta|edge|none) ;; *) echo "Unsupported channel: $channel" >&2; exit 2 ;; esac
+if [[ -f "$SOURCE_DIR/release/installer-version" ]]; then
+  cat "$SOURCE_DIR/release/installer-version" > /etc/agentos/version
+elif [[ -f "$SOURCE_DIR/release/channels/$channel.json" ]] && command -v jq >/dev/null 2>&1; then
+  jq -er '.version' "$SOURCE_DIR/release/channels/$channel.json" > /etc/agentos/version
 else
   echo dev > /etc/agentos/version
 fi

@@ -11,7 +11,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 out_dir="${AGENTOS_ISO_OUT:-$repo_root/out}"
 work_dir="${AGENTOS_ISO_WORK:-$repo_root/.build/archiso}"
 profile="$work_dir/profile"
-version="${AGENTOS_VERSION:-0.1.0}"
+version="${AGENTOS_VERSION:-}"
 source_rev="${AGENTOS_SOURCE_REV:?Set AGENTOS_SOURCE_REV to the reviewed commit to build}"
 source_commit="$(git -C "$repo_root" rev-parse --verify "$source_rev^{commit}")"
 [[ "$source_commit" == "$(git -C "$repo_root" rev-parse HEAD)" ]] || {
@@ -43,13 +43,6 @@ package_cache="$work_dir/package-cache"
 install_repo="$work_dir/install-repo"
 mkdir -p "$package_cache"
 
-# Brand the ISO without maintaining a fragile fork of ArchISO's boot files.
-sed -i \
-  -e "s/^iso_name=.*/iso_name=\"agentos-${version}\"/" \
-  -e 's/^iso_label=.*/iso_label="AGENTOS_$(date +%Y%m)"/' \
-  -e 's/^iso_publisher=.*/iso_publisher="AgentOS"/' \
-  -e 's/^iso_application=.*/iso_application="AgentOS persistent AI-agent workstation"/' \
-  "$profile/profiledef.sh"
 
 brand_uefi_menu() {
   local entry
@@ -119,6 +112,22 @@ jq -e --arg commit "$source_commit" --arg channel "$channel" \
   "$signed_repo_dir/release-manifest.json" >/dev/null || {
     echo 'Signed repository must match the selected source commit and installer channel.' >&2; exit 1;
   }
+
+manifest_version="$(jq -er '.version | select(type == "string" and test("^[A-Za-z0-9][A-Za-z0-9._+-]*$"))' "$signed_repo_dir/release-manifest.json")"
+[[ -z "$version" || "$version" == "$manifest_version" ]] || {
+  echo 'AGENTOS_VERSION must match the signed repository version.' >&2; exit 1;
+}
+version="$manifest_version"
+printf '%s\n' "$version" > "$source_dir/source/release/installer-version"
+
+# Brand the ISO without maintaining a fragile fork of ArchISO's boot files.
+sed -i \
+  -e "s/^iso_name=.*/iso_name=\"agentos-${version}\"/" \
+  -e 's/^iso_label=.*/iso_label="AGENTOS_$(date +%Y%m)"/' \
+  -e 's/^iso_publisher=.*/iso_publisher="AgentOS"/' \
+  -e 's/^iso_application=.*/iso_application="AgentOS persistent AI-agent workstation"/' \
+  "$profile/profiledef.sh"
+
 
 # Populate the ISO with the complete Arch dependency closure. The direct
 # AgentOS dependencies are listed in packages.txt, so the local install repo

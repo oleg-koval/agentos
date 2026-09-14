@@ -32,7 +32,10 @@ Pages and therefore is not the community installation path.
 The build requires a clean tracked checkout and an explicit source revision.
 It exports only committed files with `git archive`; local screenshots, caches,
 untracked files, and Git history do not enter the ISO. The signed package
-manifest must match the selected source commit and channel. Arch dependencies
+manifest must match the selected source commit and channel. The ISO is labeled
+using the verified manifest version; the embedded installer records
+that same version on the installed system. An explicit `AGENTOS_VERSION`
+override must match the signed manifest. Arch dependencies
 are downloaded into an embedded local repository; they are rolling inputs,
 so a source commit alone does not imply a byte-reproducible ISO.
 
