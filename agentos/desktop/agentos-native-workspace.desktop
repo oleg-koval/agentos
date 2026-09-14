@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AgentOS Native Workspace
+Comment=Native Qt workspace for persistent AgentOS sessions
+Exec=agentos-native-workspace
+Icon=computer
+Terminal=false
+Categories=System;Development;
+StartupWMClass=AgentOS-Native-Workspace

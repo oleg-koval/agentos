@@ -1,0 +1,10 @@
+# Arch package build outputs are release artifacts, not source files.
+packages/*/pkg/
+packages/*/*.pkg.tar.*
+out/
+.build/
+.playwright-mcp/
+.revmux/
+artifacts/
+__pycache__/
+*.pyc

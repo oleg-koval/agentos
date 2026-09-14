@@ -1,0 +1,12 @@
+[Unit]
+Description=AgentOS weekly stable update
+After=network-online.target
+Wants=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/agentos/agentos-weekly-update --scheduled
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

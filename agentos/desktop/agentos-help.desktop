@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AgentOS Help
+Comment=Offline onboarding and troubleshooting
+Exec=kitty -e agentos help
+Icon=help-contents
+Terminal=false
+Categories=Documentation;System;

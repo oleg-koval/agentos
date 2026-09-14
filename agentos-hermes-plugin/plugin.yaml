@@ -1,0 +1,14 @@
+name: agentos-observability
+version: "1.0.0"
+description: "Forward bounded Hermes lifecycle, tool and approval events to AgentOS."
+author: AgentOS
+hooks:
+  - on_session_start
+  - on_session_end
+  - on_session_finalize
+  - pre_tool_call
+  - post_tool_call
+  - pre_approval_request
+  - post_approval_response
+  - subagent_start
+  - subagent_stop

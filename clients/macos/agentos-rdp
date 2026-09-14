@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST="${AGENTOS_RDP_HOST:-}"
+USER_NAME="${AGENTOS_RDP_USER:-${USER:-}}"
+MODE="fullscreen"
+REMOTE_SIZE="${AGENTOS_RDP_SIZE:-1920x1080}"
+PROFILE="default"
+SIZE_EXPLICIT=0
+if [[ -n "${AGENTOS_RDP_SIZE:-}" ]]; then
+  SIZE_EXPLICIT=1
+fi
+
+usage() {
+  cat <<'EOF'
+Usage: agentos-rdp [--windowed] [--native] [--responsive] [--host IP] [--user USER] [--size WxH]
+
+Connect from macOS to AgentOS over Tailscale using FreeRDP SDL.
+
+Defaults:
+  host:       $AGENTOS_RDP_HOST (required)
+  user:       $AGENTOS_RDP_USER or the local macOS user
+  remote size:$AGENTOS_RDP_SIZE or 1920x1080
+  mode:       fullscreen with local smart scaling
+
+Modes:
+  default     Keep the remote desktop at 1920x1080 and scale it to the Mac
+              display. This avoids tiny UI on Retina/HiDPI screens.
+  --windowed  Open a 1920x1080 resizable window with smart scaling.
+  --native    Ask KRDP to follow the client resolution dynamically. Useful on
+              non-Retina screens, but can make UI very small on high-DPI Macs.
+  --responsive Use a lower-cost 1280x720, 16-bit session with reduced graphics
+               effects for slow or high-latency FreeRDP connections.
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --windowed) MODE="windowed" ;;
+    --native) MODE="native" ;;
+    --responsive) PROFILE="responsive" ;;
+    --host) shift; HOST="${1:?missing host}" ;;
+    --user) shift; USER_NAME="${1:?missing user}" ;;
+    --size) shift; REMOTE_SIZE="${1:?missing size}"; SIZE_EXPLICIT=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+if [[ "$PROFILE" == "responsive" && "$SIZE_EXPLICIT" -eq 0 ]]; then
+  REMOTE_SIZE="1280x720"
+fi
+
+[[ -n "$HOST" ]] || { echo 'Set AGENTOS_RDP_HOST or pass --host.' >&2; exit 2; }
+[[ -n "$USER_NAME" ]] || { echo 'Set AGENTOS_RDP_USER or pass --user.' >&2; exit 2; }
+
+if ! command -v sdl-freerdp >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+sdl-freerdp is not installed.
+Install it with:
+  brew install freerdp
+EOF
+  exit 1
+fi
+
+args=(
+  "/v:${HOST}"
+  "/u:${USER_NAME}"
+  "/cert:ignore"
+  "/clipboard"
+  "/network:auto"
+)
+
+case "$MODE" in
+  fullscreen)
+    args+=("/f" "/size:${REMOTE_SIZE}" "/smart-sizing")
+    ;;
+  windowed)
+    args+=("/size:${REMOTE_SIZE}" "/smart-sizing")
+    ;;
+  native)
+    args+=("/dynamic-resolution")
+    ;;
+esac
+
+if [[ "$PROFILE" == "responsive" ]]; then
+  args+=(
+    "/bpp:16"
+    "/gdi:sw"
+    "/gfx:progressive:off"
+    "/compression-level:2"
+    "-wallpaper"
+    "-themes"
+    "-fonts"
+    "-menu-anims"
+    "/audio-mode:0"
+  )
+fi
+
+printf 'Connecting to AgentOS %s as %s (%s, %s profile)...\n' "$HOST" "$USER_NAME" "$MODE" "$PROFILE"
+exec sdl-freerdp "${args[@]}"

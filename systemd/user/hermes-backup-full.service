@@ -1,0 +1,6 @@
+[Unit]
+Description=Create a full portable Hermes backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hermes-backup --full

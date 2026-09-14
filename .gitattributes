@@ -1,0 +1,3 @@
+# Internal planning history is not part of source/ISO exports.
+/docs/superpowers export-ignore
+/tasks export-ignore

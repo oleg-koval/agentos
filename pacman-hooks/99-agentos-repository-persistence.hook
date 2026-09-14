@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Preserve AgentOS repository configuration
+When = PostTransaction
+Exec = /usr/lib/agentos/ensure-repository-config
+NeedsTargets

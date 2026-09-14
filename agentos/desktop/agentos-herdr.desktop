@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Herdr
+Comment=Persistent agent workspace
+Exec=kitty -e zsh -lc herdr
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;

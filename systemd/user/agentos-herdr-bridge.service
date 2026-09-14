@@ -1,0 +1,23 @@
+[Unit]
+Description=AgentOS Herdr lifecycle bridge
+After=agentosd.service
+Wants=agentosd.service
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/bin
+# Herdr is optional on headless VPS installs. Avoid a restart loop until the
+# user installs the optional Herdr tooling.
+ExecCondition=/usr/bin/bash -c 'command -v herdr >/dev/null 2>&1'
+ExecStart=/usr/bin/agentos-herdr-bridge
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+StateDirectory=agentos
+ReadWritePaths=%h/.local/state/agentos
+ReadOnlyPaths=%h/.config/herdr %h/src %h/worktrees
+
+[Install]
+WantedBy=default.target

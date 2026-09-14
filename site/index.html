@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgentOS Workstation | Arch Linux Setup &amp; Recovery</title>
+  <meta name="description" content="Build and operate an Arch Linux workstation or VPS with encrypted storage, boot-safe Btrfs rollback, guarded updates, health checks, and agent tooling.">
+  <meta name="theme-color" content="#101d27">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="canonical" href="https://oleg-koval.github.io/agentos/">
+  <link rel="icon" href="og-agentos.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AgentOS Workstation">
+  <meta property="og:title" content="AgentOS Workstation | Arch Linux Setup &amp; Recovery">
+  <meta property="og:description" content="A reproducible Arch Linux setup for reliable AI-assisted development and operations on physical machines and VPS hosts.">
+  <meta property="og:url" content="https://oleg-koval.github.io/agentos/">
+  <meta property="og:image" content="https://oleg-koval.github.io/agentos/og-agentos.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="AgentOS Workstation update and recovery workflow">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AgentOS Workstation | Arch Linux Setup &amp; Recovery">
+  <meta name="twitter:description" content="Reproducible Arch workstations and VPS hosts with signed updates, recovery controls, and agent tooling.">
+  <meta name="twitter:image" content="https://oleg-koval.github.io/agentos/og-agentos.png">
+  <meta name="twitter:image:alt" content="AgentOS Workstation update and recovery workflow">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AgentOS Workstation",
+    "description": "A reproducible Arch Linux workstation and VPS setup for reliable AI-assisted development and operations.",
+    "url": "https://oleg-koval.github.io/agentos/",
+    "codeRepository": "https://github.com/oleg-koval/agentos",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Arch Linux",
+    "license": "https://github.com/oleg-koval/agentos/blob/main/LICENSE"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="/agentos-workstation/" aria-label="AgentOS Workstation home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M3 16h6l3-8 7 16 4-8h6"/>
+        </svg>
+        <span>AgentOS Workstation</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="install.html">Install</a>
+        <a href="support.html">Support</a>
+        <a href="#recovery">Recovery</a>
+        <a href="#fit">Fit</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/oleg-koval/agentos">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="context-line">Physical workstations · already-provisioned Arch VPS hosts</p>
+        <h1 id="hero-title">Reliable Arch Linux for AI-assisted work.</h1>
+        <p class="hero-summary">AgentOS Workstation reproducibly configures developer machines with signed, channel-gated updates, recovery controls, health checks, and manageable agent tooling. It is a workstation setup—not “an AI operating system.”</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="install.html">View installation guide</a>
+          <a class="button button-secondary" href="https://github.com/oleg-koval/agentos">View on GitHub</a>
+        </div>
+        <ul class="outcome-list" aria-label="Core outcomes">
+          <li><span aria-hidden="true">✓</span> Recover safely after an update</li>
+          <li><span aria-hidden="true">✓</span> Reproduce physical and VPS configurations</li>
+          <li><span aria-hidden="true">✓</span> Keep agents and operations observable</li>
+        </ul>
+      </div>
+
+      <figure class="workflow" id="recovery" aria-labelledby="workflow-title">
+        <div class="workflow-head">
+          <div>
+            <p>Documented recovery path</p>
+            <h2 id="workflow-title">Update with a way back</h2>
+          </div>
+          <span class="system-state"><i aria-hidden="true"></i> manual recovery path</span>
+        </div>
+        <ol class="workflow-steps">
+          <li>
+            <span class="step-number">1</span>
+            <div><strong>Inspect</strong><code>agentos update --check</code></div>
+            <span class="step-state">read only</span>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <div><strong>Run manual convergence</strong><code>sync-workstation</code></div>
+            <span class="step-state">manual option</span>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <div><strong>Verify recovery points</strong><code>sudo rollback-workstation list</code></div>
+            <span class="step-state">boot-safe</span>
+          </li>
+          <li>
+            <span class="step-number">4</span>
+            <div><strong>Stage only if needed</strong><code>sudo rollback-workstation stage &lt;snapshot-name&gt;</code></div>
+            <span class="step-state">next boot only</span>
+          </li>
+        </ol>
+        <figcaption>When the pre-pacman snapshot succeeds, the physical Btrfs path pairs a read-only root snapshot with the matching kernel and initrd bundle. Staging recovery leaves normal boot entries intact.</figcaption>
+      </figure>
+    </section>
+
+    <section class="evidence-bar" aria-label="Repository-backed evidence">
+      <div class="shell evidence-grid">
+        <p><strong>LUKS2</strong><span>default for physical installs</span></p>
+        <p><strong>Btrfs + /boot</strong><span>matched recovery artifacts</span></p>
+        <p><strong>Channel-gated updates</strong><span>automatic on stable only</span></p>
+        <p><strong>Read-only onboarding</strong><span>for remote VPS checks</span></p>
+      </div>
+    </section>
+
+    <section class="section shell" aria-labelledby="outcomes-title">
+      <div class="section-heading">
+        <h2 id="outcomes-title">Operational outcomes first</h2>
+        <p>The project combines installation, convergence, health, and recovery procedures so maintenance remains inspectable and recoverable.</p>
+      </div>
+      <div class="outcome-grid">
+        <article>
+          <span class="signal signal-recovery" aria-hidden="true"></span>
+          <h3>Recover after updates</h3>
+          <p>Pre-pacman snapshots include matching boot artifacts, so a staged one-shot rollback does not pair an old root with a newer kernel.</p>
+          <a href="https://github.com/oleg-koval/agentos#btrfs-snapshots-and-boot-consistent-rollback">Read the rollback procedure</a>
+        </article>
+        <article>
+          <span class="signal signal-config" aria-hidden="true"></span>
+          <h3>Reproduce a machine</h3>
+          <p>A package manifest, managed dotfiles, system policy, and one convergence command configure physical workstations. A separate signed bootstrap handles supported Arch VPS hosts.</p>
+          <a href="https://github.com/oleg-koval/agentos#ongoing-convergence">Review convergence</a>
+        </article>
+        <article>
+          <span class="signal signal-agents" aria-hidden="true"></span>
+          <h3>Manage agent work</h3>
+          <p>AgentOS packages project, session, activity, system health, and agent lifecycle surfaces while preserving normal Linux permission boundaries.</p>
+          <a href="https://github.com/oleg-koval/agentos/blob/main/docs/help.md">See the command guide</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section proof-section" aria-labelledby="proof-title">
+      <div class="shell proof-layout">
+        <div class="section-heading sticky-heading">
+          <h2 id="proof-title">Claims you can inspect</h2>
+          <p>Each operational promise maps to scripts, documentation, or validation in the repository.</p>
+          <a class="text-link" href="https://github.com/oleg-koval/agentos/actions">Inspect GitHub Actions</a>
+        </div>
+        <div class="proof-list">
+          <article>
+            <p class="proof-index">Update control</p>
+            <h3>Stable updates run weekly with recovery checks.</h3>
+            <p>The stable channel schedules an update from the configured signed repository on AC power. Beta, edge, and none skip scheduled updates; read-only inspection and manual apply commands remain available.</p>
+            <a href="https://github.com/oleg-koval/agentos/blob/main/core/cmd/agentos-ops/main.go">Repository evidence: update command</a>
+          </article>
+          <article>
+            <p class="proof-index">Storage</p>
+            <h3>Encryption is the physical-install default.</h3>
+            <p>The physical installer defaults to LUKS2 and creates a Btrfs layout with dedicated subvolumes and compression. The VPS bootstrap does not partition or format disks.</p>
+            <a href="https://github.com/oleg-koval/agentos/blob/main/install.sh">Repository evidence: installer</a>
+          </article>
+          <article>
+            <p class="proof-index">Recovery</p>
+            <h3>Root and boot state move together.</h3>
+            <p>The pacman hook captures both a root snapshot and its matching systemd-boot entry, kernel, and initrd bundle; the rollback tool stages a one-shot entry.</p>
+            <a href="https://github.com/oleg-koval/agentos/blob/main/rollback-workstation.sh">Repository evidence: rollback tool</a>
+          </article>
+          <article>
+            <p class="proof-index">Health</p>
+            <h3>Checks cover more than “service is running.”</h3>
+            <p>The doctor inspects Btrfs counters, disk space, failed units, remote access, snapshots, backup freshness, and other configured services.</p>
+            <a href="https://github.com/oleg-koval/agentos/blob/main/workstation-doctor.sh">Repository evidence: workstation doctor</a>
+          </article>
+          <article>
+            <p class="proof-index">Validation</p>
+            <h3>CI exercises packaging and recovery contracts.</h3>
+            <p>The repository checks shell syntax, ShellCheck, package contents, signed distribution behavior, mocked transactions, rollback, onboarding, and configuration flows.</p>
+            <a href="https://github.com/oleg-koval/agentos/blob/main/.github/workflows/ci.yml">Repository evidence: CI workflow</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <aside class="install-warning shell" aria-labelledby="warning-title">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Zm0 6v6m0 3v.01"/></svg>
+      <div>
+        <h2 id="warning-title">Physical installation can erase the configured target disk.</h2>
+        <p><code>install.sh</code> partitions and formats the selected disk. Set or select <code>DISK</code>, verify the device, and type <code>YES</code> deliberately before it proceeds. Back up data first. The already-provisioned VPS bootstrap is a different path and does not partition or format disks.</p>
+      </div>
+      <a class="button button-warning" href="https://github.com/oleg-koval/agentos#fresh-install">Review before installing</a>
+    </aside>
+
+    <section class="section shell" id="fit" aria-labelledby="fit-title">
+      <div class="section-heading">
+        <h2 id="fit-title">Who it is for—and who it is not for</h2>
+      </div>
+      <div class="fit-grid">
+        <article class="fit-yes">
+          <h3>Good fit</h3>
+          <ul>
+            <li>Developers who want a reproducible Arch workstation for AI-assisted development</li>
+            <li>AI-agent power users who need persistent sessions, health visibility, and deliberate tool updates</li>
+            <li>Homelab operators comfortable with Linux, SSH, snapshots, and explicit maintenance</li>
+            <li>Operators of already-provisioned Arch Linux x86_64 VPS hosts with systemd and pacman</li>
+          </ul>
+        </article>
+        <article class="fit-no">
+          <h3>Not a fit</h3>
+          <ul>
+            <li>Anyone looking for a new AI operating system or a replacement for the Linux ecosystem</li>
+            <li>Operators who require a maintenance model other than AgentOS’s channel-gated stable schedule</li>
+            <li>Non-Arch VPS hosts, managed platforms, or hosts without an existing non-root SSH user</li>
+            <li>Anyone who cannot safely back up and dedicate a physical target disk to the installer</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section concerns-section" aria-labelledby="concerns-title">
+      <div class="shell">
+        <div class="section-heading">
+          <h2 id="concerns-title">Reasonable concerns, explicit boundaries</h2>
+        </div>
+        <dl class="concern-list">
+          <div>
+            <dt>“The installer looks destructive.”</dt>
+            <dd>It is. The physical installer requires an explicit target disk and deliberate erase confirmation (Cancel is the interactive default). Use the separate VPS path for an already-provisioned Arch host.</dd>
+          </div>
+          <div>
+            <dt>“Arch updates can break a working machine.”</dt>
+            <dd>Stable updates are scheduled weekly, attempt a pre-transaction snapshot, run post-update health checks, and arm a next-boot health gate when a recovery point exists. Snapshot failure does not currently abort the update. Other channels skip scheduled updates, and manual inspection/apply commands remain available.</dd>
+          </div>
+          <div>
+            <dt>“Will this work on my VPS?”</dt>
+            <dd>The documented target is an already-provisioned Arch Linux x86_64 host with systemd, pacman, SSH, and a non-root user. The provider matrix currently records Google Cloud validation; AWS and Hetzner remain pending.</dd>
+          </div>
+          <div>
+            <dt>“Does this lock me to one vendor?”</dt>
+            <dd>The source repository is configurable, VPS bootstrap is provider-neutral, and agent capabilities are explicit selections. AgentOS still relies on Arch Linux and whichever agent services you choose.</dd>
+          </div>
+          <div>
+            <dt>“Is the native shell required?”</dt>
+            <dd>Native Workspace is the documented default graphical surface after its authorized QA path. Chromium Home remains installed as the recovery fallback, and headless VPS operation remains available over SSH.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section shell" id="faq" aria-labelledby="faq-title">
+      <div class="section-heading">
+        <h2 id="faq-title">Frequently asked questions</h2>
+      </div>
+      <div class="faq-list">
+        <details>
+          <summary>Does AgentOS update Arch automatically?</summary>
+          <p>The stable channel schedules a weekly update on AC power. Beta, edge, and none skip scheduled updates. Use <code>agentos update --check</code> to inspect and <code>agentos update --apply</code> for a manual run.</p>
+        </details>
+        <details>
+          <summary>Does the VPS installer erase disks?</summary>
+          <p>No. The VPS bootstrap expects an already-provisioned Arch host. It does not install an operating system, partition or format disks, change the firewall, alter <code>sshd</code>, or reboot the host.</p>
+        </details>
+        <details>
+          <summary>What does read-only VPS onboarding check?</summary>
+          <p>It checks SSH, signed-repository state, installed AgentOS packages, the localhost API, and the graphical Home service when a Wayland session exists. It does not repair packages, restart services, or change access policy.</p>
+        </details>
+        <details>
+          <summary>How does rollback avoid kernel mismatch?</summary>
+          <p>The pre-pacman process stores the Btrfs root snapshot together with matching systemd-boot, kernel, and initrd files. A staged rollback uses dedicated recovery files for the next boot only.</p>
+        </details>
+        <details>
+          <summary>Is Secure Boot enabled automatically?</summary>
+          <p>No. The repository lists Secure Boot with signed boot artifacts as remaining hardening. It is intentionally not auto-enabled because key enrollment changes firmware trust state.</p>
+        </details>
+        <details>
+          <summary>Where do I start when something is unhealthy?</summary>
+          <p>Start with <code>agentos health</code>, <code>agentos state</code>, and <code>agentos repository status</code>. The troubleshooting guide keeps inspection separate from repair.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="shell final-cta-inner">
+        <div>
+          <h2>Review the recovery path before the install path.</h2>
+          <p>Choose the physical or VPS workflow, confirm its boundaries, then follow the repository guide.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="button button-primary" href="install.html">View installation guide</a>
+          <a class="button button-secondary-dark" href="https://github.com/oleg-koval/agentos">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-inner">
+      <p>AgentOS Workstation is MIT-licensed software for Arch Linux operators.</p>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/oleg-koval/agentos/blob/main/LICENSE">MIT License</a>
+        <a href="https://github.com/oleg-koval/agentos/blob/main/docs/vps-onboarding.md">VPS onboarding</a>
+        <a href="https://github.com/oleg-koval/agentos/blob/main/docs/troubleshooting.md">Troubleshooting</a>
+        <a href="https://github.com/oleg-koval/agentos/blob/main/docs/native-shell-qa-status.md">Native shell status</a>
+        <a href="install.html">Install</a>
+        <a href="support.html">Support</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

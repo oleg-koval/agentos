@@ -1,0 +1,9 @@
+# Set your own identity before committing:
+#   git config --global user.name "Your Name"
+#   git config --global user.email "you@example.com"
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true
+[push]
+	autoSetupRemote = true

@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install validation tooling and sync Arch repositories
+        run: pacman -Syu --noconfirm git shellcheck util-linux go jq gnupg python-yaml
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch package-version comparison base
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch --no-tags origin main:refs/remotes/origin/main
+
+      - name: Validate scripts, policy assets, and package manifest
+        run: |
+          bash tests/static.sh
+          python3 tests/installer-menu.py
+
+      - name: Validate signed distribution contract
+        env:
+          AGENTOS_VERSION_BASE_URL: ${{ vars.AGENTOS_VERSION_BASE_URL }}
+        run: |
+          bash tests/release-static.sh
+          bash tests/package-version.sh
+          bash tests/package-version-fixtures.sh
+          python3 tests/package-version-guard.py
+          bash tests/release-manifest.sh
+          bash tests/tool-versions.sh
+          bash tests/repository-verify.sh
+          python3 tests/site.py
+
+      - name: Build packages and validate package contents
+        run: |
+          useradd -m -U builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          runuser -u builder -- bash repository/build-repo.sh
+          bash tests/package-content.sh out/repo/x86_64
+          bash tests/package-install-migration.sh out/repo/x86_64
+
+      - name: Validate signing key rotation and expiry handling
+        run: bash tests/key-rotation.sh
+
+      - name: Validate transactional convergence and boot gate
+        run: |
+          bash -n agentos-transaction.sh
+          bash -n agentos-boot-health.sh
+          shellcheck -S error agentos-transaction.sh agentos-boot-health.sh
+          grep -Fq 'Convergence preflight' sync-workstation.sh
+          grep -Fq 'agentos-transaction.sh" validate' sync-workstation.sh
+          grep -Fq 'agentos-transaction.sh' packages/agentos-runtime/PKGBUILD
+          grep -Fq 'rollback-workstation' core/cmd/agentos-ops/main.go
+          grep -Fq 'rollback-staged' core/cmd/agentos-ops/main.go
+          grep -Fq 'systemctl --user restart agentosd.service' sync-workstation.sh
+          grep -Fq 'systemctl --user restart agentos-herdr-bridge.service' sync-workstation.sh
+          grep -Fq 'agentos-boot-health arm' sync-workstation.sh
+          grep -Fq 'attempts >= 1' agentos-boot-health.sh
+
+      - name: Build AgentOS persistent runtime and operations binaries
+        run: cd core && go test ./... && go build ./cmd/agentosd2 && go build ./cmd/agentos-ops
+
+      - name: Run mocked integration tests
+        run: |
+          bash tests/github-assets.sh
+          bash tests/support-telemetry.sh
+          bash tests/config-init.sh
+          bash tests/integration.sh
+          bash tests/transaction.sh
+          bash tests/boot-health.sh
+          bash tests/migration.sh
+          bash tests/set-channel.sh
+          bash tests/doctor-repository-invariant.sh
+          bash tests/pages-overlay.sh
+          bash tests/fetch-live-channel.sh
+          bash tests/vps-install.sh
+          bash tests/capabilities.sh
+          bash tests/update-gate.sh
+          bash tests/repository-verify-signatures.sh
+          bash tests/config-channel-none.sh
+          bash tests/install-completeness.sh
+          bash tests/package-collision.sh
+          bash tests/optional-tools.sh

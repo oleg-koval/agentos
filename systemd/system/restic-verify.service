@@ -1,0 +1,8 @@
+[Unit]
+Description=Verify Restic repository and perform restore smoke test
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/restic-verify

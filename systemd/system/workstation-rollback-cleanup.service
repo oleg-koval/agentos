@@ -1,0 +1,10 @@
+[Unit]
+Description=Clean consumed AgentOS one-shot rollback state
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rollback-boot-cleanup
+
+[Install]
+WantedBy=multi-user.target

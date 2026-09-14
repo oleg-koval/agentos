@@ -1,0 +1,14 @@
+{
+  "KPlugin": {
+    "Name": "AgentOS Shell Shortcuts",
+    "Description": "Global AgentOS Home activation and view shortcuts",
+    "Icon": "computer",
+    "Authors": [{"Name": "AgentOS"}],
+    "Id": "agentos-shell",
+    "Version": "1.0.0",
+    "License": "MIT"
+  },
+  "X-Plasma-API": "javascript",
+  "X-Plasma-MainScript": "code/main.js",
+  "KPackageStructure": "KWin/Script"
+}

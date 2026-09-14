@@ -1,0 +1,10 @@
+{
+  "channel": "stable",
+  "version": "0.1.0",
+  "cadence": "weekly",
+  "update_window": "Sunday 06:00 local time",
+  "auto_update": true,
+  "reboot": "manual",
+  "upstream": "arch",
+  "repository": "agentos"
+}

@@ -1,0 +1,20 @@
+version: 1
+channel: stable
+remote_access:
+  ssh: true
+  tailscale: false
+  krdp: false
+agents:
+  claude: true
+  codex: true
+models:
+  qwen-coder: true
+project_roots:
+  - /home/your-user/src
+backup:
+  enabled: false
+  schedule: weekly
+  target: /home/your-user/.config/agentos/hermes-backup-recipients.txt
+power:
+  sleep: disabled
+  hibernate: disabled

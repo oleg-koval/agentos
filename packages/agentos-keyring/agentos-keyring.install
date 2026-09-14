@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+
+# pacman only trusts a key it has imported into its own keyring, so shipping the
+# armoured key as a file is not enough. Importing on every upgrade is what lets a
+# rotated key reach machines that are already installed.
+_add_key() {
+  pacman-key --add /usr/share/agentos/agentos-signing.asc >/dev/null 2>&1 || true
+}
+
+post_install() {
+  _add_key
+}
+
+post_upgrade() {
+  _add_key
+}

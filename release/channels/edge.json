@@ -1,0 +1,9 @@
+{
+  "channel": "edge",
+  "version": "0.1.0",
+  "cadence": "every successful main build",
+  "auto_update": false,
+  "reboot": "manual",
+  "upstream": "arch",
+  "repository": "agentos"
+}

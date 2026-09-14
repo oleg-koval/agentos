@@ -1,0 +1,54 @@
+name: Support request
+description: Ask for help diagnosing or using AgentOS safely
+title: "[Support] "
+labels:
+  - support
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Concise description of the question or obstacle.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal or question
+      description: What are you trying to do, and what outcome do you need?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and steps tried
+      description: Safe commands and steps already taken. Do not include secrets, raw prompts, or proprietary task text.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and environment
+      description: AgentOS version, OS, architecture, host role, command or package, and affected scope only. Redact identity and private paths.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Safe diagnostics
+      description: Include relevant read-only output from agentos health, agentos repository status, systemctl, or journalctl. Redact secrets, personal paths, and unrelated data.
+  - type: textarea
+    id: desired_resolution
+    attributes:
+      label: Desired resolution
+      description: What answer, workaround, or observable result would resolve this request?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: A checklist of observable conditions for closing this request.
+      placeholder: "- [ ] ..."
+    validations:
+      required: true

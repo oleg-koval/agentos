@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Codex
+Comment=Codex coding agent
+Exec=kitty -e zsh -lc codex
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;

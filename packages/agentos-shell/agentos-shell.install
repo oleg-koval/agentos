@@ -1,0 +1,111 @@
+#!/usr/bin/bash
+
+MIGRATION_ROOT="${AGENTOS_MIGRATION_ROOT:-}"
+legacy_path(){ printf '%s%s' "$MIGRATION_ROOT" "$1"; }
+workstation_user(){
+  local user="${AGENTOS_WORKSTATION_USER:-${SUDO_USER:-}}"
+  if [[ -f /etc/agentos/host.conf ]]; then
+    # shellcheck disable=SC1091
+    source /etc/agentos/host.conf
+    user="${WORKSTATION_USER:-$user}"
+  elif [[ -f /etc/legacy-workstation.conf ]]; then
+    # shellcheck disable=SC1091
+    source /etc/legacy-workstation.conf
+    user="${WORKSTATION_USER:-$user}"
+  fi
+  [[ -n "$user" ]] || return 0
+  printf '%s\n' "$user"
+}
+workstation_home(){
+  local user
+  user="$(workstation_user || true)"
+  [[ -n "$user" ]] || return 0
+  getent passwd "$user" | cut -d: -f6
+}
+
+_install_kwin_script() {
+  local home="$1" user source
+  user="$(workstation_user || true)"
+  [[ -n "$user" ]] || return 0
+  source="$(legacy_path /usr/share/kwin/scripts/agentos-shell)"
+  [[ -d "$source" ]] || return 0
+  if ! runuser -u "$user" -- env \
+    AGENTOS_KWIN_HOME="$(legacy_path "$home")" \
+    AGENTOS_KWIN_SOURCE="$source" \
+    /usr/bin/bash -c '
+      set -euo pipefail
+      parent="$AGENTOS_KWIN_HOME/.local/share/kwin/scripts"
+      [[ -L "$parent" ]] && rm -f "$parent"
+      install -d -m 755 "$parent"
+      rm -rf -- "$parent/agentos-shell"
+      cp -a -- "$AGENTOS_KWIN_SOURCE" "$parent/"
+    ' >/dev/null 2>&1; then
+    echo "warning: could not restore KWin shortcuts for $user" >&2
+  fi
+}
+
+_reload_active_user_manager() {
+  local user uid runtime
+  local runtime_root="${AGENTOS_RUNTIME_ROOT:-/run/user}"
+  user="$(workstation_user)"
+  uid="$(id -u "$user" 2>/dev/null)" || return 0
+  runtime="$runtime_root/$uid"
+  [[ -d "$runtime" ]] || return 0
+
+  if ! runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user daemon-reload >/dev/null 2>&1; then
+    echo "warning: could not reload active user manager for $user" >&2
+    return 0
+  fi
+  if ! runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user enable --now agentos-home.service >/dev/null 2>&1; then
+    echo "warning: could not start AgentOS Home for $user" >&2
+  fi
+  if ! runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user enable agentos-native-workspace.service >/dev/null 2>&1; then
+    echo "warning: could not enable native Workspace for $user" >&2
+  fi
+  if runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user is-active --quiet agentos-native-workspace.service >/dev/null 2>&1; then
+    runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+      DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+      systemctl --user restart agentos-native-workspace.service >/dev/null 2>&1 || \
+      echo "warning: could not restart native Workspace for $user" >&2
+  fi
+}
+
+pre_install() {
+  # Remove only known legacy source-sync command paths so /usr/local does not
+  # shadow the signed package in /usr/bin.
+  for path in \
+    /usr/local/bin/agentos-home \
+    /usr/local/bin/agentos-ui \
+    /usr/local/bin/agentos-shell \
+    /usr/local/bin/agentos-desktop \
+    /usr/local/bin/agentos-native-workspace \
+    /etc/systemd/user/agentos-home.service \
+    /etc/systemd/user/agentos-native-workspace.service \
+    /etc/systemd/user/agentos-ui@.service; do
+    rm -f "$(legacy_path "$path")"
+  done
+}
+
+pre_upgrade() {
+  pre_install
+}
+
+post_install() {
+  local home
+  home="$(workstation_home || true)"
+  [[ -n "$home" ]] && _install_kwin_script "$home"
+  systemctl --global enable agentos-home.service agentos-native-workspace.service >/dev/null 2>&1 || true
+  _reload_active_user_manager
+}
+
+post_upgrade() {
+  post_install
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install AgentOS | Community Beta Preparation</title>
+  <meta name="description" content="Track AgentOS community beta installation readiness for x86_64 Arch workstations.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header"><div class="shell header-inner">
+    <a class="brand" href="index.html"><span>AgentOS Workstation</span></a>
+    <nav aria-label="Main navigation"><a href="index.html">Home</a><a href="support.html">Support</a></nav>
+  </div></header>
+  <main id="main">
+    <section class="page-hero shell">
+      <p class="context-line">Community beta · acceptance pending</p>
+      <h1>Check beta installation readiness.</h1>
+      <p class="hero-summary">Public source is available. A community installer is not yet accepted: signed builds, VM installation, and physical-device checks must pass before downloads are announced.</p>
+    </section>
+    <section class="section shell guide-grid" aria-labelledby="vps-title">
+      <article class="guide-card">
+        <h2 id="vps-title">Already-provisioned Arch VPS</h2>
+        <p>Supported target: x86_64 Arch Linux with systemd, pacman, an active SSH server, and an existing non-root user. The bootstrap never partitions disks, changes SSH/firewall settings, or reboots.</p>
+        <ol>
+          <li>Download <code>agentos-vps-install.sh</code> and its adjacent checksum from the accepted release.</li>
+          <li>Run <code>sha256sum -c agentos-vps-install.sh.sha256</code>, then run the script once without <code>--yes</code> to inspect its plan.</li>
+          <li>Apply with your selected <code>--channel</code>, project roots, and <code>--agents</code>; rerunning is safe.</li>
+        </ol>
+        <p>Trust anchor: <code>EAC73D1D595C8F7D809D42EB268D28C12D93BC1B</code>. The standalone installer embeds the release URL, public key URL, and fingerprint so it does not require a source checkout.</p>
+      </article>
+      <article class="guide-card">
+        <h2>Dedicated physical machine</h2>
+        <p>Use the versioned ISO from the accepted GitHub Release on a disposable VM first, then only on a dedicated approved x86_64 disk. Verify the ISO checksum and detached signature before booting.</p>
+        <p><strong>Destructive boundary:</strong> the physical installer partitions and formats the selected disk after deliberate erase confirmation (Cancel is the interactive default). Back up data and verify the device before continuing.</p>
+        <p>After installation, keep the Chromium Home fallback and SSH access while validating Native Workspace, updates, reboot health, and staged rollback.</p>
+      </article>
+    </section>
+    <section class="section shell guide-card" aria-labelledby="updates-title">
+      <h2 id="updates-title">Updates and recovery</h2>
+      <p>Stable updates are signed and scheduled weekly; beta and edge are for supervised validation. Updates do not reboot automatically. Inspect with <code>agentos update --check</code>, apply manually with <code>agentos update --apply</code>, and keep the previous recovery point until health is confirmed.</p>
+      <p>For a failed physical update, use <code>sudo rollback-workstation list</code> and stage a known <code>boot-safe</code> snapshot. The VPS reset command restores saved repository/configuration files but is not a package rollback.</p>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="shell footer-inner"><p>Community beta preparation for x86_64 Arch operators.</p><nav aria-label="Footer navigation"><a href="index.html">Home</a><a href="support.html">Support</a></nav></div></footer>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "capabilities": [
+    {"id":"claude","kind":"agent","title":"Claude Code","installer":"agent-tools"},
+    {"id":"codex","kind":"agent","title":"Codex","installer":"agent-tools"},
+    {"id":"hermes","kind":"agent","title":"Hermes","installer":"agent-tools"},
+    {"id":"herdr","kind":"agent","title":"Herdr","installer":"agent-tools"},
+    {"id":"browser","kind":"capability","title":"Browser Automation","packages":["chromium"]},
+    {"id":"github","kind":"capability","title":"GitHub","packages":["github-cli"]},
+    {"id":"docker","kind":"capability","title":"Docker","packages":["docker","docker-compose"]},
+    {"id":"postgres","kind":"capability","title":"PostgreSQL","packages":["postgresql"]},
+    {"id":"supabase","kind":"capability","title":"Supabase","provider":"agent-integrations"},
+    {"id":"vercel","kind":"capability","title":"Vercel","provider":"agent-integrations"},
+    {"id":"qwen-coder","kind":"model","title":"Qwen 2.5 Coder 7B","ollama":"qwen2.5-coder:7b"},
+    {"id":"gemma","kind":"model","title":"Gemma 4 E4B","ollama":"gemma4:e4b"},
+    {"id":"ci-repair","kind":"workflow","title":"CI Repair","provider":"hermes"},
+    {"id":"pr-review","kind":"workflow","title":"PR Review","provider":"hermes"},
+    {"id":"issue-to-pr","kind":"workflow","title":"Issue to PR","provider":"herdr"},
+    {"id":"research","kind":"workflow","title":"Research","provider":"hermes"}
+  ]
+}

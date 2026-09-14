@@ -1,0 +1,33 @@
+pkgname=agentos-shell
+pkgver=0.4.3
+pkgrel=20
+pkgdesc='AgentOS Home shell and Plasma integration'
+arch=('x86_64')
+license=('MIT')
+depends=('chromium' 'plasma-workspace' 'dolphin' 'kitty' 'python' 'qt6-declarative')
+install=agentos-shell.install
+source=()
+sha256sums=()
+
+package() {
+  local src="$startdir/../.."
+  install -Dm755 "$src/agentos-home.sh" "$pkgdir/usr/bin/agentos-home"
+  install -Dm755 "$src/agentos-ui.sh" "$pkgdir/usr/bin/agentos-ui"
+  install -Dm755 "$src/agentos-shell.sh" "$pkgdir/usr/bin/agentos-shell"
+  install -Dm755 "$src/agentos-desktop.sh" "$pkgdir/usr/bin/agentos-desktop"
+  install -Dm755 "$src/agentos-native-workspace.sh" "$pkgdir/usr/bin/agentos-native-workspace"
+  install -Dm644 "$src/agentos/native-shell/Main.qml" "$pkgdir/usr/share/agentos/native-shell/Main.qml"
+  install -Dm644 "$src/agentos/desktop/agentos-native-workspace.desktop" "$pkgdir/usr/share/applications/agentos-native-workspace.desktop"
+  install -Dm644 "$src/agentos/desktop/agentos-help.desktop" "$pkgdir/usr/share/applications/agentos-help.desktop"
+  install -Dm644 "$src/systemd/user/agentos-home.service" \
+    "$pkgdir/usr/lib/systemd/user/agentos-home.service"
+  install -Dm644 "$src/systemd/user/agentos-native-workspace.service" \
+    "$pkgdir/usr/lib/systemd/user/agentos-native-workspace.service"
+  install -Dm644 "$src/systemd/user/agentos-ui@.service" "$pkgdir/usr/lib/systemd/user/agentos-ui@.service"
+  install -Dm644 "$src/agentos/theme/AgentOS.colors" "$pkgdir/usr/share/color-schemes/AgentOS.colors"
+  install -Dm644 "$src/agentos/theme/wallpaper.svg" "$pkgdir/usr/share/agentos/wallpaper.svg"
+  install -Dm644 "$src/agentos/kwin/metadata.json" "$pkgdir/usr/share/kwin/scripts/agentos-shell/metadata.json"
+  install -Dm644 "$src/agentos/kwin/contents/code/main.js" "$pkgdir/usr/share/kwin/scripts/agentos-shell/contents/code/main.js"
+  install -Dm644 "$src/agentos/plasmoids/com.agentos.status/metadata.json" "$pkgdir/usr/share/plasma/plasmoids/com.agentos.status/metadata.json"
+  install -Dm644 "$src/agentos/plasmoids/com.agentos.status/contents/ui/main.qml" "$pkgdir/usr/share/plasma/plasmoids/com.agentos.status/contents/ui/main.qml"
+}

@@ -1,0 +1,9 @@
+{
+  "channel": "beta",
+  "version": "0.1.0",
+  "cadence": "promoted builds",
+  "auto_update": false,
+  "reboot": "manual",
+  "upstream": "arch",
+  "repository": "agentos"
+}

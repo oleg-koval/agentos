@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Prune old Btrfs pacman snapshots
+When = PostTransaction
+Exec = /usr/bin/btrfs-prune-pacman-snapshots

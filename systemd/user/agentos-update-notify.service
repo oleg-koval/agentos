@@ -1,0 +1,10 @@
+[Unit]
+Description=Notify about a new AgentOS update state
+After=graphical-session.target agentosd.service
+Wants=agentosd.service
+PartOf=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/agentos/agentos-update-notify

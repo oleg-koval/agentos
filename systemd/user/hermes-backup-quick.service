@@ -1,0 +1,6 @@
+[Unit]
+Description=Create a quick portable Hermes backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hermes-backup --quick

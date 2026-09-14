@@ -1,0 +1,419 @@
+name: AgentOS Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Promotion channel (edge builds only from main)
+        required: true
+        default: beta
+        type: choice
+        options: [edge, beta, stable]
+      source_run_id:
+        description: Successful source run ID (required for beta and stable promotion)
+        required: false
+        type: string
+      build_iso:
+        description: Build and sign a versioned x86_64 ISO artifact (manual only)
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: agentos-release-main
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-edge:
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.channel == 'edge' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tooling
+        run: pacman -Syu --noconfirm git gnupg go jq pacman-contrib
+      - name: Require and import signing key
+        id: key
+        env:
+          AGENTOS_GPG_PRIVATE_KEY: ${{ secrets.AGENTOS_GPG_PRIVATE_KEY }}
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+        run: |
+          test -n "$AGENTOS_GPG_PRIVATE_KEY" || { echo 'AGENTOS_GPG_PRIVATE_KEY secret is required' >&2; exit 1; }
+          test -n "$AGENTOS_GPG_KEY_ID" || { echo 'AGENTOS_GPG_KEY_ID secret is required' >&2; exit 1; }
+          useradd -m -U builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          install -d -o builder -g builder -m 700 /home/builder/.gnupg
+          printf '%s\n' "$AGENTOS_GPG_PRIVATE_KEY" > /tmp/agentos-private.asc
+          chown builder:builder /tmp/agentos-private.asc
+          runuser -u builder -- gpg --batch --import /tmp/agentos-private.asc
+          rm -f /tmp/agentos-private.asc
+          fpr="$(runuser -u builder -- gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr"{print $10;exit}')"
+          expected="$(printf '%s' "$AGENTOS_GPG_KEY_ID" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')"
+          actual="$(printf '%s' "$fpr" | tr '[:lower:]' '[:upper:]')"
+          test "$actual" = "$expected" || { echo "Signing key fingerprint mismatch: $actual != $expected" >&2; exit 1; }
+          echo "fingerprint=$actual" >> "$GITHUB_OUTPUT"
+      - name: Static validation
+        run: bash tests/static.sh
+      - name: Build and sign pacman repository
+        env:
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+        run: |
+          runuser -u builder -- env AGENTOS_SIGN_KEY="$AGENTOS_GPG_KEY_ID" AGENTOS_REPO_OUT="$GITHUB_WORKSPACE/out/repo/x86_64" bash "$GITHUB_WORKSPACE/repository/build-repo.sh"
+      - name: Build and sign edge manifest
+        env:
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+          AGENTOS_BUILD_COMMIT: ${{ github.sha }}
+          AGENTOS_BOOTSTRAP: ${{ github.workspace }}/agentos-vps-install.sh
+        run: |
+          runuser -u builder -- env AGENTOS_SIGN_KEY="$AGENTOS_GPG_KEY_ID" AGENTOS_BOOTSTRAP="$AGENTOS_BOOTSTRAP" bash "$GITHUB_WORKSPACE/release/build-manifest.sh" edge "$GITHUB_WORKSPACE/out/repo/x86_64"
+          runuser -u builder -- gpg --armor --export "$AGENTOS_GPG_KEY_ID" > "$GITHUB_WORKSPACE/out/repo/agentos-repo-public.asc"
+          printf '%s\n' "${{ steps.key.outputs.fingerprint }}" > "$GITHUB_WORKSPACE/out/repo/fingerprint.txt"
+      - name: Verify signed edge artifact
+        run: |
+          cd "$GITHUB_WORKSPACE/out/repo/x86_64"
+          for pkg in *.pkg.tar.zst; do runuser -u builder -- gpg --batch --verify "$pkg.sig" "$pkg"; done
+          runuser -u builder -- gpg --batch --verify agentos.db.tar.gz.sig agentos.db.tar.gz
+          runuser -u builder -- gpg --batch --verify agentos.files.tar.gz.sig agentos.files.tar.gz
+          runuser -u builder -- gpg --batch --verify release-manifest.json.asc release-manifest.json
+          sha256sum -c release-manifest.json.sha256
+          jq -e --arg commit "${{ github.sha }}" '.channel == "edge" and .commit == $commit' release-manifest.json >/dev/null
+          bootstrap_sha="$(jq -er '.bootstrap.sha256' release-manifest.json)"
+          test "$(sha256sum "$GITHUB_WORKSPACE/agentos-vps-install.sh" | awk '{print $1}')" = "$bootstrap_sha"
+          bash "$GITHUB_WORKSPACE/tests/package-content.sh" "$GITHUB_WORKSPACE/out/repo/x86_64"
+      - name: Publish standalone VPS bootstrap asset
+        run: |
+          install -m 755 agentos-vps-install.sh out/repo/agentos-vps-install.sh
+          (cd out/repo && sha256sum agentos-vps-install.sh > agentos-vps-install.sh.sha256)
+          test -x out/repo/agentos-vps-install.sh
+          (cd out/repo && sha256sum -c agentos-vps-install.sh.sha256)
+      - name: Upload immutable edge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentos-edge-repository
+          path: out/repo
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record edge build evidence
+        run: |
+          {
+            echo "## AgentOS edge artifact"
+            echo "- trigger: ${{ github.event_name }}"
+            echo "- source commit: ${{ github.sha }}"
+            echo "- artifact: agentos-edge-repository"
+            echo "- promotion: beta must reference this successful main run ID"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    needs: build-edge
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.channel == 'edge' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install verification tooling
+        run: pacman -Syu --noconfirm gnupg
+      - name: Download edge artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: agentos-edge-repository
+          path: artifact
+      - name: Verify signatures and signing-subkey expiry
+        env:
+          AGENTOS_VERIFY_MIN_DAYS: '30'
+        run: bash repository/verify-repo.sh artifact/x86_64 release/agentos-signing.asc
+
+  build-iso:
+    needs: [verify, promote]
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.build_iso == true && github.ref == 'refs/heads/main' && ((inputs.channel == 'edge' && needs.verify.result == 'success') || (inputs.channel == 'beta' && needs.promote.result == 'success')) }}
+    runs-on: ubuntu-latest
+    env:
+      ISO_SOURCE_COMMIT: ${{ needs.promote.outputs.source_commit || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ISO_SOURCE_COMMIT }}
+      - name: Download the verified signed AgentOS repository
+        uses: actions/download-artifact@v4
+        with:
+          name: agentos-${{ inputs.channel }}-repository
+          path: iso-repo
+      - name: Validate ISO source selection
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          case "$CHANNEL" in
+            edge) [[ -z "$SOURCE_RUN_ID" ]] || { echo 'Edge ISO must not set source_run_id.' >&2; exit 1; } ;;
+            beta) [[ "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo 'Beta ISO requires the promoted source run.' >&2; exit 1; } ;;
+            *) echo 'ISO builds support edge or beta.' >&2; exit 1 ;;
+          esac
+      - name: Reclaim runner disk space for ISO build
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache
+          docker system prune --all --force --volumes
+          df -h /
+      - name: Build versioned ISO in x86_64 Arch
+        run: |
+          VERSION="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          export VERSION
+          # Docker supplies the supported Arch userspace. mkarchiso requires
+          # privilege, so it runs only inside this disposable CI container.
+          docker run --privileged --rm \
+            -e ISO_SOURCE_COMMIT -e GITHUB_REPOSITORY \
+            -e AGENTOS_CHANNEL="${{ inputs.channel }}" \
+            -e AGENTOS_VERSION="$VERSION" \
+            -e AGENTOS_SIGNED_REPO_DIR=/workspace/iso-repo/x86_64 \
+            -v "$GITHUB_WORKSPACE:/workspace" -w /workspace \
+            archlinux:base-devel bash -euxo pipefail -c '
+              pacman -Syu --noconfirm archiso git jq rsync sudo
+              useradd --uid "$(stat -c %u /workspace)" -m builder
+              printf "builder ALL=(ALL) NOPASSWD: ALL\\n" > /etc/sudoers.d/builder
+              chmod 440 /etc/sudoers.d/builder
+              runuser -u builder -- env AGENTOS_VERSION="$AGENTOS_VERSION" \
+                AGENTOS_SIGNED_REPO_DIR="$AGENTOS_SIGNED_REPO_DIR" \
+                AGENTOS_SOURCE_REV="$ISO_SOURCE_COMMIT" \
+                AGENTOS_REPO="https://github.com/$GITHUB_REPOSITORY" \
+                AGENTOS_CHANNEL="$AGENTOS_CHANNEL" \
+                AGENTOS_ISO_OUT=/workspace/out/iso \
+                AGENTOS_ISO_WORK=/workspace/.build/iso \
+                bash /workspace/build-agentos-iso.sh
+            '
+      - name: Sign and describe ISO artifact
+        env:
+          AGENTOS_GPG_PRIVATE_KEY: ${{ secrets.AGENTOS_GPG_PRIVATE_KEY }}
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+        run: |
+          test -n "$AGENTOS_GPG_PRIVATE_KEY" || { echo 'AGENTOS_GPG_PRIVATE_KEY secret is required' >&2; exit 1; }
+          test -n "$AGENTOS_GPG_KEY_ID" || { echo 'AGENTOS_GPG_KEY_ID secret is required' >&2; exit 1; }
+          iso="$(find out/iso -maxdepth 1 -type f -name 'agentos-*.iso' -print -quit)"
+          test -n "$iso" && test -f "$iso"
+          gpg_home="$RUNNER_TEMP/agentos-iso-gnupg"
+          mkdir -m 700 "$gpg_home"
+          printf '%s\n' "$AGENTOS_GPG_PRIVATE_KEY" | gpg --homedir "$gpg_home" --batch --import
+          (cd "$(dirname "$iso")" && sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256")
+          gpg --homedir "$gpg_home" --batch --yes --armor --detach-sign --local-user "$AGENTOS_GPG_KEY_ID" --output "$iso.asc" "$iso"
+          hash="$(awk '{print $1}' "$iso.sha256")"
+          version="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          iso_name="$(basename "$iso")"
+          case "$iso_name" in
+            "agentos-${version}-"*.iso) ;;
+            *) echo "ISO filename does not carry channel version ${version}: ${iso_name}" >&2; exit 1 ;;
+          esac
+          jq -n --arg schema 'agentos.iso/v1' --arg channel "${{ inputs.channel }}" \
+            --arg version "$version" --arg commit "${{ env.ISO_SOURCE_COMMIT }}" \
+            --arg name "$iso_name" --arg sha256 "$hash" \
+            '{schema:$schema,channel:$channel,version:$version,commit:$commit,iso:{name:$name,sha256:$sha256}}' > out/iso/iso-manifest.json
+          rm -rf "$gpg_home"
+      - name: Verify ISO checksum and signature
+        run: |
+          iso="$(find out/iso -maxdepth 1 -type f -name 'agentos-*.iso' -print -quit)"
+          (cd "$(dirname "$iso")" && sha256sum -c "$(basename "$iso").sha256")
+          gpg --batch --import release/agentos-signing.asc
+          gpg --batch --verify "$iso.asc" "$iso"
+          version="$(jq -er '.version' "release/channels/${{ inputs.channel }}.json")"
+          iso_name="$(basename "$iso")"
+          case "$iso_name" in
+            "agentos-${version}-"*.iso) ;;
+            *) echo "ISO filename does not carry channel version ${version}: ${iso_name}" >&2; exit 1 ;;
+          esac
+          jq -e --arg channel "${{ inputs.channel }}" --arg version "$version" \
+            --arg commit "${{ env.ISO_SOURCE_COMMIT }}" --arg name "$iso_name" \
+            --arg hash "$(awk '{print $1}' "$iso.sha256")" \
+            '.schema == "agentos.iso/v1" and .channel == $channel and .version == $version and .commit == $commit and .iso.name == $name and .iso.sha256 == $hash' \
+            out/iso/iso-manifest.json >/dev/null
+      - name: Upload immutable ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentos-iso-${{ env.ISO_SOURCE_COMMIT }}
+          path: out/iso
+          if-no-files-found: error
+          retention-days: 30
+
+  promote:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.channel != 'edge' && (inputs.build_iso != true || inputs.channel == 'beta') && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    outputs:
+      target_channel: ${{ steps.source.outputs.target_channel }}
+      source_run_id: ${{ steps.source.outputs.source_run_id }}
+      source_commit: ${{ steps.manifest.outputs.source_commit }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select successful source artifact
+        id: source
+        uses: actions/github-script@v7
+        env:
+          TARGET_CHANNEL: ${{ inputs.channel }}
+          REQUESTED_RUN_ID: ${{ inputs.source_run_id }}
+        with:
+          script: |
+            const target = process.env.TARGET_CHANNEL;
+            const sourceArtifactName = target === 'beta' ? 'agentos-edge-repository' : 'agentos-beta-repository';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            let run;
+            if (process.env.REQUESTED_RUN_ID) {
+              const runId = Number(process.env.REQUESTED_RUN_ID);
+              if (!Number.isSafeInteger(runId) || runId <= 0) {
+                core.setFailed('source_run_id must be a positive workflow run ID');
+                return;
+              }
+              run = (await github.rest.actions.getWorkflowRun({owner, repo, run_id: runId})).data;
+            } else {
+              core.setFailed('source_run_id is required; promotion never selects an unaccepted beta automatically');
+              return;
+            }
+            if (!run || run.status !== 'completed' || run.conclusion !== 'success') {
+              core.setFailed('no successful source workflow run is available');
+              return;
+            }
+            if (run.path !== '.github/workflows/release.yml' || run.head_branch !== 'main') {
+              core.setFailed('source run is not this release workflow on main');
+              return;
+            }
+            if (target === 'beta' && run.event !== 'push') {
+              core.setFailed('beta promotion requires a successful main push edge artifact');
+              return;
+            }
+            if (target === 'stable' && run.event !== 'workflow_dispatch') {
+              core.setFailed('stable promotion requires a manually promoted beta artifact');
+              return;
+            }
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner, repo, run_id: run.id, per_page: 100
+            });
+            if (!artifacts.some((artifact) => artifact.name === sourceArtifactName && !artifact.expired)) {
+              core.setFailed('source artifact is unavailable or expired');
+              return;
+            }
+            core.setOutput('target_channel', target);
+            core.setOutput('source_run_id', String(run.id));
+            core.setOutput('source_commit', run.head_sha);
+            core.setOutput('artifact_name', sourceArtifactName);
+      - name: Download signed source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.source.outputs.artifact_name }}
+          path: source
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source.outputs.source_run_id }}
+      - name: Require and import signing key
+        env:
+          AGENTOS_GPG_PRIVATE_KEY: ${{ secrets.AGENTOS_GPG_PRIVATE_KEY }}
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+        run: |
+          test -n "$AGENTOS_GPG_PRIVATE_KEY" || { echo 'AGENTOS_GPG_PRIVATE_KEY secret is required' >&2; exit 1; }
+          test -n "$AGENTOS_GPG_KEY_ID" || { echo 'AGENTOS_GPG_KEY_ID secret is required' >&2; exit 1; }
+          mkdir -m 700 "$HOME/.gnupg"
+          printf '%s\n' "$AGENTOS_GPG_PRIVATE_KEY" | gpg --batch --import
+          fpr="$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr"{print $10;exit}')"
+          expected="$(printf '%s' "$AGENTOS_GPG_KEY_ID" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')"
+          actual="$(printf '%s' "$fpr" | tr '[:lower:]' '[:upper:]')"
+          test "$actual" = "$expected" || { echo "Signing key fingerprint mismatch: $actual != $expected" >&2; exit 1; }
+      - name: Promote without rebuilding
+        env:
+          AGENTOS_GPG_KEY_ID: ${{ secrets.AGENTOS_GPG_KEY_ID }}
+          AGENTOS_PROMOTION_SOURCE_RUN_ID: ${{ steps.source.outputs.source_run_id }}
+        run: |
+          mkdir -p out/repo/x86_64
+          AGENTOS_SIGN_KEY="$AGENTOS_GPG_KEY_ID" bash release/promote-repository.sh source/x86_64 "${{ steps.source.outputs.target_channel }}" out/repo/x86_64 "$AGENTOS_PROMOTION_SOURCE_RUN_ID"
+          cp source/agentos-repo-public.asc out/repo/
+          cp source/fingerprint.txt out/repo/
+          cp source/agentos-vps-install.sh source/agentos-vps-install.sh.sha256 out/repo/
+      - name: Verify promoted signed artifact
+        id: manifest
+        env:
+          TARGET_CHANNEL: ${{ steps.source.outputs.target_channel }}
+          SOURCE_RUN_ID: ${{ steps.source.outputs.source_run_id }}
+          SOURCE_COMMIT: ${{ steps.source.outputs.source_commit }}
+        run: |
+          cd out/repo/x86_64
+          for pkg in *.pkg.tar.zst; do gpg --batch --verify "$pkg.sig" "$pkg"; done
+          gpg --batch --verify agentos.db.tar.gz.sig agentos.db.tar.gz
+          gpg --batch --verify agentos.files.tar.gz.sig agentos.files.tar.gz
+          gpg --batch --verify release-manifest.json.asc release-manifest.json
+          sha256sum -c release-manifest.json.sha256
+          jq -e --arg channel "$TARGET_CHANNEL" --arg run "$SOURCE_RUN_ID" --arg commit "$SOURCE_COMMIT" '.channel == $channel and ($channel == "stable" or .commit == $commit) and .promotion.source_run_id == $run' release-manifest.json >/dev/null
+          echo "source_commit=$(jq -er '.commit' release-manifest.json)" >> "$GITHUB_OUTPUT"
+          test -f ../agentos-vps-install.sh
+          (cd .. && sha256sum -c agentos-vps-install.sh.sha256)
+          test "$(sha256sum ../agentos-vps-install.sh | awk '{print $1}')" = "$(jq -er '.bootstrap.sha256' release-manifest.json)"
+      - name: Upload promoted artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentos-${{ steps.source.outputs.target_channel }}-repository
+          path: out/repo
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Assemble published site
+        env:
+          PAGES_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          TARGET_CHANNEL: ${{ steps.source.outputs.target_channel }}
+        run: |
+          mkdir -p out/site out/live out/flat
+          for ch in edge beta stable; do
+            bash release/fetch-live-channel.sh "$PAGES_BASE_URL" "$ch" "out/live/$ch"
+          done
+          flat="out/flat/$TARGET_CHANNEL"
+          mkdir -p "$flat"
+          cp out/repo/x86_64/*.pkg.tar.zst "$flat/"
+          cp out/repo/x86_64/*.pkg.tar.zst.sig "$flat/"
+          cp out/repo/x86_64/agentos.db "$flat/"
+          cp out/repo/x86_64/agentos.db.sig "$flat/"
+          cp out/repo/x86_64/agentos.db.tar.gz "$flat/"
+          cp out/repo/x86_64/agentos.db.tar.gz.sig "$flat/"
+          cp out/repo/x86_64/agentos.files "$flat/"
+          cp out/repo/x86_64/agentos.files.sig "$flat/"
+          cp out/repo/x86_64/agentos.files.tar.gz "$flat/"
+          cp out/repo/x86_64/agentos.files.tar.gz.sig "$flat/"
+          cp out/repo/x86_64/release-manifest.json "$flat/"
+          cp out/repo/x86_64/release-manifest.json.sha256 "$flat/"
+          cp out/repo/x86_64/release-manifest.json.asc "$flat/"
+          for ch in edge beta stable; do
+            if [[ -d "out/live/$ch" ]] && [[ -n "$(ls -A "out/live/$ch" 2>/dev/null)" ]]; then
+              bash release/pages-overlay.sh out/site "$ch" "out/live/$ch"
+            fi
+          done
+          bash release/pages-overlay.sh out/site "$TARGET_CHANNEL" "$flat"
+          # The root installer must keep tracking stable, whichever channel this
+          # run promoted.
+          bash release/assemble-site-root.sh "$TARGET_CHANNEL" "$PAGES_BASE_URL" out/repo out/site
+          cp release/agentos-signing.asc out/site/agentos-signing.asc
+      - name: Prepare Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/site
+      - name: Record explicit promotion evidence
+        run: |
+          {
+            echo "## AgentOS release promotion verification"
+            echo "- trigger: ${{ github.event_name }}"
+            echo "- promotion policy: explicit source run; automatic stable promotion disabled"
+            echo "- target: ${{ steps.source.outputs.target_channel }}"
+            echo "- source run: ${{ steps.source.outputs.source_run_id }}"
+            echo "- source commit: ${{ steps.manifest.outputs.source_commit }}"
+            echo "- source artifact: ${{ steps.source.outputs.artifact_name }}"
+            echo "- idempotency key: ${{ steps.source.outputs.target_channel }}:${{ steps.source.outputs.source_run_id }}:${{ steps.source.outputs.source_commit }}"
+            echo "- result: signed artifact promoted without package rebuild"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    if: ${{ needs.promote.result == 'success' }}
+    needs: promote
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy promoted signed channel repository
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,110 @@
+pkgname=agentos-runtime
+pkgver=0.4.13
+pkgrel=51
+pkgdesc='AgentOS persistent runtime, lifecycle events, updater, health, recovery and boot gate'
+arch=('x86_64')
+license=('MIT')
+depends=('bash' 'git' 'jq' 'libnotify' 'pacman-contrib' 'btrfs-progs' 'systemd' 'curl' 'gnupg' 'nodejs' 'npm' 'python')
+makedepends=('go')
+install=agentos-runtime.install
+source=()
+sha256sums=()
+
+build() {
+  local src="$startdir/../.."
+  cd "$src/core"
+  go build -trimpath -ldflags='-s -w' -o /tmp/agentos-ops ./cmd/agentos-ops
+  go build -trimpath -ldflags='-s -w' -o /tmp/agentosd ./cmd/agentosd2
+  go build -trimpath -ldflags='-s -w' -o /tmp/agentos-config ./cmd/agentos-config
+}
+
+package() {
+  local src="$startdir/../.."
+  install -Dm755 "$src/agentos-cli.sh" "$pkgdir/usr/bin/agentos"
+  install -Dm755 "$src/install-agent-tools.sh" "$pkgdir/usr/bin/install-agent-tools"
+  install -Dm755 /tmp/agentos-ops "$pkgdir/usr/bin/agentos-ops"
+  install -Dm755 /tmp/agentosd "$pkgdir/usr/bin/agentosd"
+  install -Dm755 /tmp/agentos-config "$pkgdir/usr/bin/agentos-config"
+  install -Dm755 "$src/agentos-agent-event.sh" "$pkgdir/usr/bin/agentos-agent-event"
+  install -Dm755 "$src/agentos-native-event.sh" "$pkgdir/usr/bin/agentos-native-event"
+  install -Dm755 "$src/agentos-herdr-bridge.sh" "$pkgdir/usr/bin/agentos-herdr-bridge"
+  install -Dm755 "$src/agentos-transaction.sh" "$pkgdir/usr/bin/agentos-transaction"
+  install -Dm755 "$src/agentos-boot-health.sh" "$pkgdir/usr/bin/agentos-boot-health"
+  install -Dm755 "$src/agentos-repository.sh" "$pkgdir/usr/bin/agentos-repository"
+  install -Dm755 "$src/agentos-onboarding.sh" "$pkgdir/usr/bin/agentos-onboarding"
+  install -Dm755 "$src/agentos-vps-install.sh" "$pkgdir/usr/bin/agentos-vps-install"
+  install -Dm755 "$src/agentos-power-policy.sh" "$pkgdir/usr/bin/agentos-power-policy"
+  install -Dm755 "$src/agentos-migrate-notify.sh" "$pkgdir/usr/lib/agentos/agentos-migrate-notify"
+  install -Dm755 "$src/agentos-update-notify.sh" "$pkgdir/usr/lib/agentos/agentos-update-notify"
+  install -Dm755 "$src/agentos-weekly-update.sh" "$pkgdir/usr/lib/agentos/agentos-weekly-update"
+  install -Dm755 "$src/workstation-doctor.sh" "$pkgdir/usr/bin/workstation-doctor"
+  install -Dm755 "$src/maintenance-check.sh" "$pkgdir/usr/bin/workstation-maintenance-check"
+  install -Dm755 "$src/rollback-boot-cleanup.sh" "$pkgdir/usr/bin/rollback-boot-cleanup"
+  install -Dm755 "$src/hermes-backup.sh" "$pkgdir/usr/bin/hermes-backup"
+  install -Dm755 "$src/restic-verify.sh" "$pkgdir/usr/bin/restic-verify"
+  install -Dm755 "$src/agentos-support.sh" "$pkgdir/usr/bin/agentos-support"
+  install -Dm755 "$src/agentos-telemetry.sh" "$pkgdir/usr/bin/agentos-telemetry"
+  install -Dm755 "$src/setup-project-layout.sh" "$pkgdir/usr/bin/setup-project-layout"
+  install -Dm755 "$src/ensure-repository-config.sh" "$pkgdir/usr/lib/agentos/ensure-repository-config"
+  install -Dm755 "$src/ensure-agentos-config.sh" "$pkgdir/usr/lib/agentos/ensure-agentos-config"
+  install -Dm755 "$src/repository/verify-repo.sh" "$pkgdir/usr/lib/agentos/verify-repo.sh"
+  install -Dm755 "$src/rollback-workstation.sh" "$pkgdir/usr/bin/rollback-workstation"
+  install -Dm755 "$src/btrfs-pre-pacman-snapshot.sh" "$pkgdir/usr/bin/btrfs-pre-pacman-snapshot"
+  install -Dm755 "$src/btrfs-prune-snapshots.sh" "$pkgdir/usr/bin/btrfs-prune-pacman-snapshots"
+
+  install -Dm644 "$src/pacman-hooks/95-btrfs-pre-pacman-snapshot.hook" \
+    "$pkgdir/usr/share/libalpm/hooks/95-btrfs-pre-pacman-snapshot.hook"
+  install -Dm644 "$src/pacman-hooks/96-btrfs-prune-pacman-snapshots.hook" \
+    "$pkgdir/usr/share/libalpm/hooks/96-btrfs-prune-pacman-snapshots.hook"
+  install -Dm644 "$src/pacman-hooks/99-agentos-repository-persistence.hook" \
+    "$pkgdir/usr/share/libalpm/hooks/99-agentos-repository-persistence.hook"
+
+  install -Dm644 "$src/systemd/user/agentosd.service" \
+    "$pkgdir/usr/lib/systemd/user/agentosd.service"
+  install -Dm644 "$src/systemd/user/agentos-herdr-bridge.service" \
+    "$pkgdir/usr/lib/systemd/user/agentos-herdr-bridge.service"
+  install -Dm644 "$src/systemd/user/agentos-migrate-notify.service" \
+    "$pkgdir/usr/lib/systemd/user/agentos-migrate-notify.service"
+  install -Dm644 "$src/systemd/user/agentos-update-notify.service" \
+    "$pkgdir/usr/lib/systemd/user/agentos-update-notify.service"
+  install -Dm644 "$src/systemd/user/agentos-update-notify.timer" \
+    "$pkgdir/usr/lib/systemd/user/agentos-update-notify.timer"
+  install -Dm644 "$src/systemd/system/agentos-boot-health.service" \
+    "$pkgdir/usr/lib/systemd/system/agentos-boot-health.service"
+  install -Dm644 "$src/systemd/system/agentos-weekly-update.service" \
+    "$pkgdir/usr/lib/systemd/system/agentos-weekly-update.service"
+  install -Dm644 "$src/systemd/system/agentos-weekly-update.timer" "$pkgdir/usr/lib/systemd/system/agentos-weekly-update.timer"
+  for unit in \
+    workstation-maintenance-check.service workstation-maintenance-check.timer \
+    workstation-health-check.service workstation-health-check.timer \
+    workstation-rollback-cleanup.service restic-verify.service restic-verify.timer; do
+    install -Dm644 "$src/systemd/system/$unit" "$pkgdir/usr/lib/systemd/system/$unit"
+  done
+  for unit in hermes-backup-quick.service hermes-backup-quick.timer hermes-backup-full.service hermes-backup-full.timer; do
+    install -Dm644 "$src/systemd/user/$unit" "$pkgdir/usr/lib/systemd/user/$unit"
+  done
+
+  install -Dm644 "$src/registry/capabilities.json" "$pkgdir/usr/share/agentos/registry/capabilities.json"
+  for scope in system user; do
+    for migration in "$src/migrations/$scope/"*.sh; do
+      install -Dm644 "$migration" "$pkgdir/usr/share/agentos/migrations/$scope/$(basename "$migration")"
+    done
+  done
+  install -Dm644 "$src/release/tool-versions.json" "$pkgdir/usr/share/agentos/tool-versions.json"
+  install -Dm644 "$src/AGENTS.md" "$pkgdir/usr/share/agentos/AGENTS.md"
+  install -Dm644 "$src/docs/help.md" "$pkgdir/usr/share/doc/agentos/help.md"
+  install -Dm644 "$src/docs/troubleshooting.md" "$pkgdir/usr/share/doc/agentos/troubleshooting.md"
+  install -Dm644 "$src/docs/friend-system-acceptance.md" "$pkgdir/usr/share/doc/agentos/friend-system-acceptance.md"
+  install -Dm644 "$src/docs/vps-onboarding.md" "$pkgdir/usr/share/doc/agentos/vps-onboarding.md"
+  install -Dm644 "$src/docs/vps-providers.md" "$pkgdir/usr/share/doc/agentos/vps-providers.md"
+  for skill in agentos-operator agentos-maintainer agentos-system; do
+    install -Dm644 "$src/.agents/skills/$skill/SKILL.md" \
+      "$pkgdir/usr/share/agentos/skills/$skill/SKILL.md"
+  done
+  install -Dm644 "$src/config/agentos-config.example.yaml" "$pkgdir/usr/share/agentos/config.yaml.example"
+  install -Dm644 "$src/agentos-hermes-plugin/plugin.yaml" "$pkgdir/usr/share/agentos/hermes-plugin/plugin.yaml"
+  install -Dm755 "$src/agentos-hermes-plugin/__init__.py" "$pkgdir/usr/share/agentos/hermes-plugin/__init__.py"
+  install -Dm644 "$src/release/channels/stable.json" "$pkgdir/usr/share/agentos/channels/stable.json"
+  install -Dm644 "$src/release/channels/beta.json" "$pkgdir/usr/share/agentos/channels/beta.json"
+  install -Dm644 "$src/release/channels/edge.json" "$pkgdir/usr/share/agentos/channels/edge.json"
+}

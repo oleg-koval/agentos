@@ -1,0 +1,8 @@
+[Unit]
+Description=Check workstation updates and health without mutating the system
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/workstation-maintenance-check

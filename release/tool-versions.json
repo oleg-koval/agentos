@@ -1,0 +1,13 @@
+{
+  "schema": "agentos.tools/v1",
+  "tools": {
+    "claude-code": { "installer": "script", "version": "2.1.260" },
+    "codex": { "installer": "npm", "package": "@openai/codex", "version": "0.153.2" },
+    "qwen-code": { "installer": "npm", "package": "@qwen-code/qwen-code", "version": "0.23.0" },
+    "playwright-cli": { "installer": "npm", "package": "@playwright/cli", "version": "0.1.19" },
+    "hermes": { "installer": "script", "version": "13e72fb205b735df679e0fd5f5996a34ac4accc6" },
+    "herdr": { "installer": "script", "version": "0.8.2" },
+    "opencode": { "installer": "script", "version": "1.18.28" },
+    "ollama-models": { "installer": "ollama", "models": ["gemma4:e4b", "qwen2.5-coder:7b"] }
+  }
+}

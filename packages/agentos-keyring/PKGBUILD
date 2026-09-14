@@ -1,0 +1,14 @@
+pkgname=agentos-keyring
+pkgver=1
+pkgrel=1
+pkgdesc='Trusted signing key for the AgentOS package repository'
+arch=('any')
+license=('MIT')
+install=agentos-keyring.install
+source=()
+sha256sums=()
+
+package() {
+  local src="$startdir/../.."
+  install -Dm644 "$src/release/agentos-signing.asc" "$pkgdir/usr/share/agentos/agentos-signing.asc"
+}

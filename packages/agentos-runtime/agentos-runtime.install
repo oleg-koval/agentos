@@ -1,0 +1,122 @@
+#!/usr/bin/bash
+
+MIGRATION_ROOT="${AGENTOS_MIGRATION_ROOT:-}"
+legacy_path(){ printf '%s%s' "$MIGRATION_ROOT" "$1"; }
+
+_workstation_user() {
+  local user="${AGENTOS_WORKSTATION_USER:-${SUDO_USER:-}}"
+  if [[ -f /etc/agentos/host.conf ]]; then
+    # shellcheck disable=SC1091
+    source /etc/agentos/host.conf
+    user="${WORKSTATION_USER:-$user}"
+  elif [[ -f /etc/legacy-workstation.conf ]]; then
+    # shellcheck disable=SC1091
+    source /etc/legacy-workstation.conf
+    user="${WORKSTATION_USER:-$user}"
+  fi
+  [[ -n "$user" ]] || return 0
+  printf '%s\n' "$user"
+}
+
+_reload_active_user_manager() {
+  local user uid runtime runtime_root="${AGENTOS_RUNTIME_ROOT:-/run/user}"
+  user="$(_workstation_user || true)"
+  [[ -n "$user" ]] || return 0
+  uid="$(id -u "$user" 2>/dev/null)" || return 0
+  runtime="$runtime_root/$uid"
+  [[ -d "$runtime" ]] || return 0
+
+  if ! runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user daemon-reload >/dev/null 2>&1; then
+    echo "warning: could not reload active user manager for $user" >&2
+    return 0
+  fi
+  if ! runuser -u "$user" -- env XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    systemctl --user enable --now agentosd.service agentos-herdr-bridge.service agentos-update-notify.timer >/dev/null 2>&1; then
+    echo "warning: could not start AgentOS runtime user services for $user" >&2
+  fi
+}
+
+pre_install() {
+  # AgentOS originally installed runtime binaries, units and pacman hooks directly
+  # under /usr/local and /etc. The signed package owns /usr/bin, /usr/lib and
+  # /usr/share/libalpm/hooks instead. Remove only known legacy AgentOS paths.
+  for path in \
+    /usr/local/bin/agentos \
+    /usr/local/bin/agentosd \
+    /usr/local/bin/agentos-agent-event \
+    /usr/local/bin/agentos-native-event \
+    /usr/local/bin/install-agent-tools \
+    /usr/local/bin/agentos-herdr-bridge \
+    /usr/local/bin/agentos-transaction \
+    /usr/local/bin/agentos-repository \
+    /usr/local/bin/agentos-support \
+    /usr/local/bin/agentos-telemetry \
+    /usr/local/bin/workstation-doctor \
+    /usr/local/bin/workstation-maintenance-check \
+    /usr/local/bin/rollback-boot-cleanup \
+    /usr/local/bin/hermes-backup \
+    /usr/local/bin/restic-verify \
+    /usr/local/bin/rollback-workstation \
+    /usr/local/bin/btrfs-pre-pacman-snapshot \
+    /usr/local/bin/btrfs-prune-pacman-snapshots \
+    /usr/local/bin/agentos-boot-health \
+    /usr/local/bin/agentos-weekly-update \
+    /usr/local/sbin/agentos-boot-health \
+    /usr/local/sbin/agentos-weekly-update \
+    /usr/local/sbin/agentos-repository \
+    /etc/systemd/user/agentosd.service \
+    /etc/systemd/user/agentos-herdr-bridge.service \
+    /etc/systemd/system/agentos-boot-health.service \
+    /etc/systemd/system/agentos-weekly-update.service \
+    /etc/systemd/system/agentos-weekly-update.timer \
+    /etc/systemd/system/workstation-maintenance-check.service \
+    /etc/systemd/system/workstation-maintenance-check.timer \
+    /etc/systemd/system/workstation-health-check.service \
+    /etc/systemd/system/workstation-health-check.timer \
+    /etc/systemd/system/workstation-rollback-cleanup.service \
+    /etc/systemd/system/restic-verify.service \
+    /etc/systemd/system/restic-verify.timer \
+    /etc/systemd/user/hermes-backup-quick.service \
+    /etc/systemd/user/hermes-backup-quick.timer \
+    /etc/systemd/user/hermes-backup-full.service \
+    /etc/systemd/user/hermes-backup-full.timer \
+    /etc/pacman.d/hooks/95-btrfs-pre-pacman-snapshot.hook \
+    /etc/pacman.d/hooks/96-btrfs-prune-pacman-snapshots.hook \
+    /usr/share/agentos/AGENTS.md; do
+    rm -f "$(legacy_path "$path")"
+  done
+}
+
+pre_upgrade() {
+  pre_install
+}
+
+_enable_agentos_units() {
+  # Package migration must preserve the always-on runtime contract. Enable the
+  # system boot/update units and globally enable user runtime units so future
+  # logins/user managers start them from /usr/lib rather than stale /etc copies.
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl enable agentos-boot-health.service agentos-weekly-update.timer >/dev/null 2>&1 || true
+  systemctl enable workstation-maintenance-check.timer workstation-health-check.timer restic-verify.timer workstation-rollback-cleanup.service >/dev/null 2>&1 || true
+  systemctl --global enable agentosd.service agentos-herdr-bridge.service agentos-migrate-notify.service agentos-update-notify.timer hermes-backup-quick.timer hermes-backup-full.timer >/dev/null 2>&1 || true
+  # The always-on sleep policy is package-owned state with no other caller on a
+  # desktop install: apply-system-policy.sh used to apply it and no longer does,
+  # and agentos-vps-install.sh only covers the VPS path. Idempotent.
+  /usr/bin/agentos-power-policy apply >/dev/null 2>&1 || true
+  _reload_active_user_manager
+}
+
+post_install() {
+  /usr/bin/agentos-repository migrate >/dev/null 2>&1 || true
+  /usr/lib/agentos/ensure-agentos-config >/dev/null 2>&1 || true
+  _enable_agentos_units
+}
+
+post_upgrade() {
+  /usr/bin/agentos-repository migrate >/dev/null 2>&1 || true
+  /usr/lib/agentos/ensure-agentos-config >/dev/null 2>&1 || true
+  _enable_agentos_units
+}

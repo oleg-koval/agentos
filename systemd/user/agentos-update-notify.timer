@@ -1,0 +1,12 @@
+[Unit]
+Description=Check AgentOS update notification state
+PartOf=graphical-session.target
+
+[Timer]
+OnActiveSec=2m
+OnUnitActiveSec=30m
+AccuracySec=2m
+Unit=agentos-update-notify.service
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,16 @@
+alias ls='eza --icons --git'
+alias ll='eza -la --icons --git --time-style=relative'
+alias la='eza -la --icons --git --time-style=relative'
+alias cat='bat --paging=never'
+alias v='nvim'
+alias g='git'
+alias gs='git status'
+alias gd='git diff'
+alias gp='git push'
+alias y='yazi'
+
+# Boring, shallow source-tree navigation.
+alias csrc='cd ~/src'
+alias cwt='cd ~/worktrees'
+alias cscratch='cd ~/scratch'
+alias cbuild='cd ~/build'

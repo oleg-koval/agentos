@@ -1,0 +1,11 @@
+[Unit]
+Description=Run AgentOS stable update weekly
+
+[Timer]
+OnCalendar=Sun 06:00
+Persistent=true
+RandomizedDelaySec=30m
+Unit=agentos-weekly-update.service
+
+[Install]
+WantedBy=timers.target

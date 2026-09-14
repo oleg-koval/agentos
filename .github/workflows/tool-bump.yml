@@ -1,0 +1,43 @@
+name: AgentOS Tool Version Bump
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Query upstream tool versions
+        run: |
+          bash release/query-tool-versions.sh release/tool-versions.json > /tmp/tool-versions.next.json
+          cp /tmp/tool-versions.next.json release/tool-versions.json
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- release/tool-versions.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: 'Weekly agent tool version bump'
+          commit-message: 'Bump pinned agent tool versions'
+          branch: tool-versions/weekly-bump
+          delete-branch: true
+          body: |
+            Automated weekly check of upstream agent tool versions.
+            Review the diff in release/tool-versions.json before merging.
+            Changes require review and manual merging.

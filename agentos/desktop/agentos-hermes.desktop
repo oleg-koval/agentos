@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hermes
+Comment=Hermes autonomous agent
+Exec=kitty -e zsh -lc hermes
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;

@@ -1,0 +1,13 @@
+[Unit]
+Description=AgentOS candidate boot health gate
+After=network-online.target tailscaled.service sshd.service plasmalogin.service
+Wants=network-online.target tailscaled.service sshd.service
+ConditionPathExists=/var/lib/agentos/boot-candidate.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/agentos-boot-health check
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

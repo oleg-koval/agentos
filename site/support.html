@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgentOS Support | Community Beta</title>
+  <meta name="description" content="Collect a redacted AgentOS support report and file a reproducible community-beta issue.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header"><div class="shell header-inner">
+    <a class="brand" href="index.html"><span>AgentOS Workstation</span></a>
+    <nav aria-label="Main navigation"><a href="index.html">Home</a><a href="install.html">Install</a></nav>
+  </div></header>
+  <main id="main">
+    <section class="page-hero shell">
+      <p class="context-line">Community beta · public issue tracker</p>
+      <h1>Bring a useful, redacted report.</h1>
+      <p class="hero-summary">Report reproducible problems through the public repository issue tracker. Do not publish hostnames, usernames, IP addresses, paths, tokens, cookies, prompts, or private keys.</p>
+    </section>
+    <section class="section shell guide-grid" aria-labelledby="collect-title">
+      <article class="guide-card">
+        <h2 id="collect-title">Collect locally</h2>
+        <p>On the affected machine, create a local support report and review it before attaching anything. This command writes a report file without uploading it:</p>
+        <pre><code>agentos support</code></pre>
+        <p>Also include the output of <code>agentos version</code>, <code>agentos health</code>, and <code>agentos update --check</code> where relevant. These commands do not enable telemetry or upload data.</p>
+      </article>
+      <article class="guide-card">
+        <h2>Issue checklist</h2>
+        <ul>
+          <li>Expected and actual behavior, with the smallest reproduction.</li>
+          <li>AgentOS version, channel, Arch architecture, and host role (VPS or physical).</li>
+          <li>First meaningful error line and the command that produced it.</li>
+          <li>Whether SSH, the localhost API, Native Workspace, or Chromium fallback is affected.</li>
+          <li>Confirm that the report was reviewed for secrets and private identity.</li>
+        </ul>
+      </article>
+    </section>
+    <section class="section shell guide-card" aria-labelledby="boundaries-title">
+      <h2 id="boundaries-title">Evidence boundaries</h2>
+      <p>A source test or CI result does not prove a physical display, keyboard, mouse, reboot, rollback, or friend acceptance. State what was tested and what was not. The maintainer will request live or device evidence only when needed.</p>
+      <p><a href="https://github.com/oleg-koval/agentos/issues/new/choose">Open an issue</a> or read <a href="https://github.com/oleg-koval/agentos/blob/main/CONTRIBUTING.md">the contribution guide</a>. GitHub sign-in is required to submit issues.</p>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="shell footer-inner"><p>Community beta support.</p><nav aria-label="Footer navigation"><a href="index.html">Home</a><a href="install.html">Install</a></nav></div></footer>
+</body>
+</html>

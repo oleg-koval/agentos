@@ -1,0 +1,13 @@
+[Unit]
+Description=Notify about pending AgentOS user migrations
+After=agentosd.service
+Wants=agentosd.service
+PartOf=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/agentos/agentos-migrate-notify
+
+[Install]
+WantedBy=graphical-session.target

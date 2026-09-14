@@ -1,0 +1,8 @@
+[Unit]
+Description=Run AgentOS workstation health checks and alert on actionable failures
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/workstation-doctor --notify

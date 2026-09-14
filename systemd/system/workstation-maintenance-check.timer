@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly workstation maintenance check
+
+[Timer]
+OnCalendar=Sun *-*-* 10:00:00
+Persistent=true
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target

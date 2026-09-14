@@ -1,0 +1,18 @@
+pkgname=agentos-base
+pkgver=0.1.0
+pkgrel=3
+pkgdesc='AgentOS base metapackage for persistent AI workstations'
+arch=('x86_64')
+license=('MIT')
+depends=(
+  base linux linux-firmware amd-ucode intel-ucode cryptsetup btrfs-progs tpm2-tss
+  openssh networkmanager tailscale krdp restic age
+  git github-cli curl sudo zsh python nodejs npm pnpm uv
+  ripgrep fd fzf bat eza zoxide direnv jq lazygit rsync
+  smartmontools nvme-cli lm_sensors pacman-contrib reflector zram-generator
+  mesa vulkan-radeon vulkan-intel plasma-meta plasma-login-manager dolphin kitty chromium
+  ollama
+)
+package() {
+  install -Dm644 /dev/null "$pkgdir/usr/share/agentos/.base"
+}

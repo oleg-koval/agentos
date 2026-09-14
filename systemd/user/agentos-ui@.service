@@ -1,0 +1,7 @@
+[Unit]
+Description=Dispatch AgentOS Home UI command %i
+After=graphical-session.target agentos-home.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/agentos-ui %i
