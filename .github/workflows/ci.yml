@@ -16,7 +16,7 @@ jobs:
       - name: Install validation tooling and sync Arch repositories
         run: pacman -Syu --noconfirm git shellcheck util-linux go jq gnupg python-yaml
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
