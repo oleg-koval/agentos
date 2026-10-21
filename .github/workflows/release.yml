@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install build tooling
         run: pacman -Syu --noconfirm git gnupg go jq pacman-contrib
       - name: Require and import signing key
@@ -95,7 +95,7 @@ jobs:
           test -x out/repo/agentos-vps-install.sh
           (cd out/repo && sha256sum -c agentos-vps-install.sh.sha256)
       - name: Upload immutable edge artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agentos-edge-repository
           path: out/repo
@@ -117,11 +117,11 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install verification tooling
         run: pacman -Syu --noconfirm gnupg
       - name: Download edge artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: agentos-edge-repository
           path: artifact
@@ -137,11 +137,11 @@ jobs:
     env:
       ISO_SOURCE_COMMIT: ${{ needs.promote.outputs.source_commit || github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.ISO_SOURCE_COMMIT }}
       - name: Download the verified signed AgentOS repository
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: agentos-${{ inputs.channel }}-repository
           path: iso-repo
@@ -230,7 +230,7 @@ jobs:
             '.schema == "agentos.iso/v1" and .channel == $channel and .version == $version and .commit == $commit and .iso.name == $name and .iso.sha256 == $hash' \
             out/iso/iso-manifest.json >/dev/null
       - name: Upload immutable ISO artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agentos-iso-${{ env.ISO_SOURCE_COMMIT }}
           path: out/iso
@@ -245,10 +245,10 @@ jobs:
       source_run_id: ${{ steps.source.outputs.source_run_id }}
       source_commit: ${{ steps.manifest.outputs.source_commit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Select successful source artifact
         id: source
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           TARGET_CHANNEL: ${{ inputs.channel }}
           REQUESTED_RUN_ID: ${{ inputs.source_run_id }}
@@ -298,7 +298,7 @@ jobs:
             core.setOutput('source_commit', run.head_sha);
             core.setOutput('artifact_name', sourceArtifactName);
       - name: Download signed source artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ steps.source.outputs.artifact_name }}
           path: source
@@ -347,7 +347,7 @@ jobs:
           (cd .. && sha256sum -c agentos-vps-install.sh.sha256)
           test "$(sha256sum ../agentos-vps-install.sh | awk '{print $1}')" = "$(jq -er '.bootstrap.sha256' release-manifest.json)"
       - name: Upload promoted artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agentos-${{ steps.source.outputs.target_channel }}-repository
           path: out/repo
@@ -389,7 +389,7 @@ jobs:
           bash release/assemble-site-root.sh "$TARGET_CHANNEL" "$PAGES_BASE_URL" out/repo out/site
           cp release/agentos-signing.asc out/site/agentos-signing.asc
       - name: Prepare Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: out/site
       - name: Record explicit promotion evidence
@@ -416,4 +416,4 @@ jobs:
     steps:
       - name: Deploy promoted signed channel repository
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
