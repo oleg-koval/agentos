@@ -1,13 +1,43 @@
 {
   "schema": "agentos.tools/v1",
   "tools": {
-    "claude-code": { "installer": "script", "version": "2.1.260" },
-    "codex": { "installer": "npm", "package": "@openai/codex", "version": "0.153.2" },
-    "qwen-code": { "installer": "npm", "package": "@qwen-code/qwen-code", "version": "0.23.0" },
-    "playwright-cli": { "installer": "npm", "package": "@playwright/cli", "version": "0.1.19" },
-    "hermes": { "installer": "script", "version": "13e72fb205b735df679e0fd5f5996a34ac4accc6" },
-    "herdr": { "installer": "script", "version": "0.8.2" },
-    "opencode": { "installer": "script", "version": "1.18.28" },
-    "ollama-models": { "installer": "ollama", "models": ["gemma4:e4b", "qwen2.5-coder:7b"] }
+    "claude-code": {
+      "installer": "script",
+      "version": "2.1.319"
+    },
+    "codex": {
+      "installer": "npm",
+      "package": "@openai/codex",
+      "version": "0.167.0"
+    },
+    "qwen-code": {
+      "installer": "npm",
+      "package": "@qwen-code/qwen-code",
+      "version": "0.27.0"
+    },
+    "playwright-cli": {
+      "installer": "npm",
+      "package": "@playwright/cli",
+      "version": "0.1.23"
+    },
+    "hermes": {
+      "installer": "script",
+      "version": "c1db5a4fe1b8d515dd96470bf71b6db1a8e0eb5d"
+    },
+    "herdr": {
+      "installer": "script",
+      "version": "0.9.5"
+    },
+    "opencode": {
+      "installer": "script",
+      "version": "1.19.5"
+    },
+    "ollama-models": {
+      "installer": "ollama",
+      "models": [
+        "gemma4:e4b",
+        "qwen2.5-coder:7b"
+      ]
+    }
   }
 }
